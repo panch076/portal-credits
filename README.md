@@ -36,15 +36,58 @@ The whole frame keeps the game's 4:3 proportions (an 8:3 character grid at
 8×16 cells) and is centred with black margins on larger terminals, rather than
 stretching to fill the window.
 
-## Run it
+## Install
 
-Needs Node 18+ and a real terminal (not a pipe).
+Requires **Node 18 or newer** and a terminal with ANSI colour. There are no
+dependencies and nothing to build.
+
+**Run it straight from the clone:**
 
 ```bash
+git clone https://github.com/panch076/portal-credits.git
+cd portal-credits
 node bin/portal-credits.js
 ```
 
-Keys: `space` pause, `←`/`→` seek 5s, `q` quit.
+**Or install it as a command** (this gives you `portal-credits` everywhere),
+from the same clone:
+
+```bash
+npm install -g .     # or, for a local symlink instead: npm link
+portal-credits
+```
+
+**Or without cloning at all:**
+
+```bash
+npx github:panch076/portal-credits
+```
+
+**Windows:** Node from [nodejs.org](https://nodejs.org) or winget, then use
+PowerShell or Windows Terminal:
+
+```powershell
+git clone https://github.com/panch076/portal-credits.git
+cd portal-credits
+node .\bin\portal-credits.js
+```
+
+`npm install -g .` also creates a `portal-credits.cmd` shim. Use Windows
+Terminal rather than the legacy console host for colour and the alternate
+screen.
+
+**WSL:** install and run it inside WSL exactly as above. It renders in the WSL
+terminal and, for sound, falls back to the Windows media player via
+`powershell.exe`, so no PulseAudio setup is needed.
+
+Check it renders without playing anything (works over ssh, or in a pipe):
+
+```bash
+portal-credits --frame 30
+node bin/portal-credits.js --frame 30   # if you didn't install the command
+```
+
+While it plays: `space` pause, `←`/`→` seek 5s, `q` quit.
 
 ## The song
 
