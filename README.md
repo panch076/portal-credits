@@ -125,8 +125,9 @@ portal-credits
 Or point at a file anywhere:
 
 ```bash
-portal-credits --audio ~/Music/portal_still_alive.mp3
+portal-credits --audio <music filepath>
 ```
+# psst... get your file from the free soundtrack on steam
 
 `$PORTAL_CREDITS_AUDIO` works too. Audio files and those folders are
 gitignored, so your copy stays local.
