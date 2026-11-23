@@ -2,20 +2,8 @@
 
 The Portal (2007) end credits, recreated in your terminal. Zero dependencies.
 
-```
- |------------------------------------------|  |-------------------------------------------------|
- | Forms FORM-29827281-12:                  |  | >LIST PERSONNEL                                 |
- | Test Assessment Report                   |  |                                                 |
- | This was a triumph._                     |  | Gautam Babbar                                   |
- | I'm making a note here:                  |  | Ted Backman                                     |
- | HUGE SUCCESS.                            |  | Kelly Bailey                                    |
- | It's hard to overstate                   |  | Jeff Ballinger                                  |
- | my satisfaction.                         |  | ...                                             |
- |                                          |  |                                                 |
- |                .,-:;//;:=,               |  |                                                 |
- |            . :H@@@MM@M#H/.,+%;,          |  |                                                 |
- |         ,/X+ +M@@M@MM%=,-%HMMM@X/,       |  |                                                 |
-```
+<img width="1557" height="937" alt="image" src="https://github.com/user-attachments/assets/6971bb6d-7630-480d-b47a-bb1cd815e7e9" />
+
 
 GLaDOS' forms type themselves out on the left, character by character, as each
 line is sung; the credit roll streams up on the right; and the game's ten ASCII
