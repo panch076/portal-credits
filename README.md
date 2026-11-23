@@ -41,6 +41,19 @@ stretching to fill the window.
 Requires **Node 18 or newer** and a terminal with ANSI colour. There are no
 dependencies and nothing to build.
 
+**Homebrew** (macOS and Linux):
+
+```bash
+brew tap panch076/portal-credits
+brew install portal-credits
+portal-credits
+```
+
+The formula pulls in Node if you don't have it, and creates a home for the
+song at `$(brew --prefix)/share/portal-credits/` — see [the song](#the-song)
+below. `brew install --HEAD panch076/portal-credits/portal-credits` tracks
+`main` instead of the release.
+
 **Run it straight from the clone:**
 
 ```bash
@@ -100,10 +113,19 @@ still-alive.mp3          # also .flac .m4a .ogg .opus .wav .aac
 portal_still_alive.mp3   # the game's own filename
 ```
 
-Look in the repo folder, `./music/`, or `./audio/` — or point at it directly:
+Look in the repo folder, `./music/`, or `./audio/`. A Homebrew install also
+checks `$(brew --prefix)/share/portal-credits/`, so with brew the whole setup
+is one `cp`:
 
 ```bash
-node bin/portal-credits.js --audio ~/Music/portal_still_alive.mp3
+cp ~/Music/portal_still_alive.mp3 "$(brew --prefix)/share/portal-credits/still-alive.mp3"
+portal-credits
+```
+
+Or point at a file anywhere:
+
+```bash
+portal-credits --audio ~/Music/portal_still_alive.mp3
 ```
 
 `$PORTAL_CREDITS_AUDIO` works too. Audio files and those folders are
@@ -132,7 +154,7 @@ sound only lines up around 1x).
 
 ```
 --audio <file>    your copy of the song
---offset <sec>    delay the song's start
+--offset <sec>    delay the song past the first line
 --speed <x>       playback speed multiplier
 --frame <sec>     print a single frame and exit (no TTY needed)
 --width <cols>    frame width for --frame      (default 100)
