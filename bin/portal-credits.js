@@ -199,15 +199,21 @@ function isWSL() {
 // the cue sheet, in seconds
 // ---------------------------------------------------------------------------
 
+// The report header types itself out first, in silence; the music cues in at
+// 7.1s and "This was a triumph" is sung a fraction later. Shifting the whole
+// sheet by that lead-in lets the document appear before the song starts, while
+// the first line still lands exactly on the first sung word.
+const MUSIC_LEAD = 7.1;
+
 const LETTER = []; // { t, text, nl } — nl: true ends the line, false continues it
 const ART = []; // { t, idx }
-let creditsStart = 9.3;
-let endT = 185;
+let creditsStart = 9.3 + MUSIC_LEAD;
+let endT = 185 + MUSIC_LEAD;
 
-for (const [payload, cs, , mode] of EVENTS) {
-  const t = cs / 100;
+for (const [payload, cs, pause, mode] of EVENTS) {
+  const t = cs / 100 + MUSIC_LEAD;
   if (mode === 0 || mode === 1) {
-    LETTER.push({ t, text: String(payload), nl: mode === 0 });
+    LETTER.push({ t, text: String(payload), nl: mode === 0, pause });
   } else if (mode === 2) {
     ART.push({ t, idx: Number(payload) });
   } else if (mode === 3) {
@@ -219,6 +225,15 @@ for (const [payload, cs, , mode] of EVENTS) {
   }
 }
 ART.sort((a, b) => a.t - b.t);
+
+// how long each cue takes to type itself out, character by character
+for (let i = 0; i < LETTER.length; i++) {
+  const ev = LETTER[i];
+  const next = LETTER[i + 1];
+  const gap = next ? Math.max(0.05, next.t - ev.t) : 1.5;
+  const wanted = ev.pause > 0 ? ev.pause * 0.8 : gap * 0.55;
+  ev.typeDur = ev.clear ? 0 : Math.max(0, Math.min(wanted, gap * 0.85, 1.5));
+}
 
 const CREDIT_LINES = CREDITS.replace(/^\n+/, '')
   .split('\n')
@@ -237,8 +252,10 @@ const TOTAL = endT;
 function letterState(t) {
   let page = [];
   let cur = '';
+  let last = null;
   for (const ev of LETTER) {
     if (ev.t > t) break;
+    last = ev;
     if (ev.clear) {
       page = [];
       cur = '';
@@ -249,6 +266,18 @@ function letterState(t) {
       cur = '';
     } else {
       cur += ev.text;
+    }
+  }
+  // the newest cue is still being typed: show only the characters reached
+  if (last && !last.clear && last.typeDur > 0 && t - last.t < last.typeDur) {
+    const len = last.text.length;
+    const chars = Math.ceil((Math.min(1, (t - last.t) / last.typeDur) || 0) * len);
+    const partial = last.text.slice(0, chars);
+    if (last.nl) {
+      const line = page[page.length - 1] ?? '';
+      page[page.length - 1] = line.slice(0, line.length - len) + partial;
+    } else {
+      cur = cur.slice(0, cur.length - len) + partial;
     }
   }
   if (cur) page.push(cur);
@@ -313,7 +342,7 @@ function drawBox(scr, x, y, w, h) {
 function layout(W, H) {
   const top = 1;
   const gap = 2;
-  const leftW = Math.max(30, Math.min(46, Math.round(W * 0.47)));
+  const leftW = Math.max(30, Math.min(56, Math.round(W * 0.47)));
   const rightX = 1 + leftW + gap;
   const rightW = W - 2 - rightX;
 
@@ -324,8 +353,9 @@ function layout(W, H) {
   // exactly where the game prints it. It is 40 columns wide and must not
   // run into the letter's box, so crop it (or drop it) on narrow screens.
   const artWanted = Math.min(40, W - 2 - (leftW + 2));
-  const artH = Math.min(20, Math.max(8, H - 16));
-  const showArt = artWanted >= 34 && H >= 24 && rightW >= 20;
+  // the game prints the full 20-row panel; keep room for a few credit lines
+  const artH = Math.min(20, Math.max(6, H - 9));
+  const showArt = artWanted >= 34 && H >= 22 && rightW >= 20;
   const artW = showArt ? artWanted : 0;
   const artX = Math.max(leftW + 3, rightX + Math.floor((rightW - artW) / 2));
   const artTop = H - artH - 1;
@@ -397,9 +427,14 @@ function buildFrame(W, H, t) {
     const rows = L.creditH;
     const shownCredits = CREDIT_LINES.slice(Math.max(0, n - rows), n);
     const startY = L.top + 1 + Math.max(0, rows - shownCredits.length);
+    const lastTime = CREDIT_TIMES[Math.max(0, n - 1)] || 0;
+    const age = t - lastTime;
     for (let i = 0; i < shownCredits.length; i++) {
-      const line = clip(shownCredits[i], L.inRight);
-      put(scr, L.rightX + 2, startY + i, line, 'main');
+      let text = shownCredits[i];
+      if (i === shownCredits.length - 1 && age >= 0 && age < 0.22) {
+        text = text.slice(0, Math.ceil((age / 0.22) * text.length));
+      }
+      put(scr, L.rightX + 2, startY + i, clip(text, L.inRight), 'main');
     }
   }
 
@@ -435,8 +470,33 @@ function renderScreen(scr, palette) {
   return out;
 }
 
+// The game is a 4:3 screen; with 8x16 character cells that is an 8:3 character
+// grid. Keeping that ratio (and letterboxing the rest) is what makes the
+// panels keep their proportions instead of stretching across a wide terminal.
+const ASPECT = 8 / 3;
+
+function canvasFor(W, H) {
+  let vw = W;
+  let vh = H;
+  if (W / H > ASPECT) vw = Math.min(W, Math.max(78, Math.round(H * ASPECT)));
+  else vh = Math.min(H, Math.max(24, Math.round(W / ASPECT)));
+  return { vw, vh, ox: Math.floor((W - vw) / 2), oy: Math.floor((H - vh) / 2) };
+}
+
 function frameAt(W, H, t, palette) {
-  return renderScreen(buildFrame(W, H, Math.max(0, t)), palette).join(EOL);
+  const { vw, vh, ox, oy } = canvasFor(W, H);
+  const inner = buildFrame(vw, vh, Math.max(0, t));
+  const scr = makeScreen(W, H);
+  for (let y = 0; y < vh; y++) {
+    const src = inner.cells[y];
+    const dst = scr.cells[oy + y];
+    if (!dst) continue;
+    for (let x = 0; x < vw; x++) {
+      const cell = src[x];
+      if (cell) dst[ox + x] = cell;
+    }
+  }
+  return renderScreen(scr, palette).join(EOL);
 }
 
 // ---------------------------------------------------------------------------
@@ -534,16 +594,9 @@ function play(o) {
   };
   process.on('exit', cleanup);
 
-  if (o.audio) {
-    AUDIO_FOUND = o.audio;
-    if (o.offset > 0) {
-      setTimeout(() => {
-        if (!finished) audio = startAudio(o.audio);
-      }, o.offset * 1000).unref();
-    } else {
-      audio = startAudio(o.audio);
-    }
-  }
+  const audioAt = MUSIC_LEAD + o.offset;
+  const audioArmed = Boolean(o.audio);
+  if (o.audio) AUDIO_FOUND = o.audio;
 
   let t = 0;
   let paused = false;
@@ -576,6 +629,8 @@ function play(o) {
     const dt = (now - last) / 1000;
     last = now;
     if (!paused) t += dt * o.speed;
+    // the song starts once the document header has finished typing
+    if (audioArmed && !audio && t >= audioAt) audio = startAudio(o.audio);
     if (t >= TOTAL + 2) {
       clearInterval(timer);
       process.stdin.removeListener('keypress', onKey);
