@@ -27,9 +27,10 @@ All of it runs off the sequence's own timing (120 cues): the letter pages
 page), the ~140-name credit roll, the art changes, and the mid-line splits
 (`I'm being ` / `so ` / `sincere right now.`).
 
-The report header types itself out first, in silence; the song cues in at 7.1s
-and the first line, "This was a triumph", lands exactly on the first sung
-word. Just over three minutes, matching the track.
+The report header types itself out first, in silence. Playback starts at 7.3s,
+the moment "This was a triumph" is typed, so the song and the first line begin
+together and every later line stays on its beat. Just over three minutes,
+matching the track.
 
 The whole frame keeps the game's 4:3 proportions (an 8:3 character grid at
 8×16 cells) and is centred with black margins on larger terminals, rather than
@@ -78,10 +79,11 @@ Playback goes through the first player it finds: `ffplay`, `mpv`, `vlc`,
 built-in Windows media player (no install needed there). With no player, or
 no track, the credits still play silently at the right pace.
 
-The song starts 7.1s in, once the report header has finished typing. If your
-copy has a longer lead-in than the official track, `--offset <sec>` delays it
-further; `--speed <x>` runs the whole thing faster or slower (the audio is
-real-time, so sound only lines up around 1x).
+The song starts with the first line, after the report header has typed itself
+out. If your copy has an intro before "This was a triumph" (some rips and the
+full soundtrack do), delay it with `--offset <sec>` — e.g. `--offset 7`.
+`--speed <x>` runs the whole thing faster or slower (the audio is real-time, so
+sound only lines up around 1x).
 
 ## Options
 

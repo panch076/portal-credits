@@ -31,7 +31,8 @@ Options
   --audio <file>    play and sync to your own copy of "Still Alive"
                     (by default it looks for still-alive.mp3 etc. in the
                     repo folder, ./music, ./audio, or $PORTAL_CREDITS_AUDIO)
-  --offset <sec>    delay the song's start, in seconds            (default 0)
+  --offset <sec>    delay the song past the first line, for copies with
+                    an intro before "This was a triumph"       (default 0)
   --speed <x>       run everything faster or slower, e.g. 2 or 0.5
   --frame <sec>     print one frame at <sec> and exit (no TTY needed)
   --width <cols>    frame width for --frame                       (default 100)
@@ -199,25 +200,26 @@ function isWSL() {
 // the cue sheet, in seconds
 // ---------------------------------------------------------------------------
 
-// The report header types itself out first, in silence; the music cues in at
-// 7.1s and "This was a triumph" is sung a fraction later. Shifting the whole
-// sheet by that lead-in lets the document appear before the song starts, while
-// the first line still lands exactly on the first sung word.
-const MUSIC_LEAD = 7.1;
-
+// Cue times are the track's own times. The report header types itself out
+// first (t=0 and t=2), the song is cued 7.1s in, and "This was a triumph"
+// starts at 7.3s. Playback is therefore started at the first sung line: the
+// header appears in silence, then the song and the first line arrive together.
 const LETTER = []; // { t, text, nl } — nl: true ends the line, false continues it
 const ART = []; // { t, idx }
-let creditsStart = 9.3 + MUSIC_LEAD;
-let endT = 185 + MUSIC_LEAD;
+let creditsStart = 9.3;
+let endT = 185;
+let musicCue = 0;
 
 for (const [payload, cs, pause, mode] of EVENTS) {
-  const t = cs / 100 + MUSIC_LEAD;
+  const t = cs / 100;
   if (mode === 0 || mode === 1) {
     LETTER.push({ t, text: String(payload), nl: mode === 0, pause });
   } else if (mode === 2) {
     ART.push({ t, idx: Number(payload) });
   } else if (mode === 3) {
     LETTER.push({ t, text: null, nl: true, clear: true });
+  } else if (mode === 4) {
+    musicCue = t;
   } else if (mode === 5) {
     creditsStart = t;
   } else if (mode === 9) {
@@ -225,6 +227,9 @@ for (const [payload, cs, pause, mode] of EVENTS) {
   }
 }
 ART.sort((a, b) => a.t - b.t);
+
+// the first line sung after the music is cued: that is when the song starts
+const SONG_START = (LETTER.find((ev) => !ev.clear && ev.t > musicCue) || { t: 7.3 }).t;
 
 // how long each cue takes to type itself out, character by character
 for (let i = 0; i < LETTER.length; i++) {
@@ -594,7 +599,7 @@ function play(o) {
   };
   process.on('exit', cleanup);
 
-  const audioAt = MUSIC_LEAD + o.offset;
+  const audioAt = SONG_START + o.offset;
   const audioArmed = Boolean(o.audio);
   if (o.audio) AUDIO_FOUND = o.audio;
 
@@ -629,7 +634,7 @@ function play(o) {
     const dt = (now - last) / 1000;
     last = now;
     if (!paused) t += dt * o.speed;
-    // the song starts once the document header has finished typing
+    // the song starts with the first line: the header has already typed itself
     if (audioArmed && !audio && t >= audioAt) audio = startAudio(o.audio);
     if (t >= TOTAL + 2) {
       clearInterval(timer);
