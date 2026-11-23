@@ -134,8 +134,9 @@ function discoverAudio() {
     path.join(process.cwd(), 'audio'),
     path.join(here, '..', 'music'),
     path.join(here, '..', 'audio'),
-    // where a Homebrew install puts it: <prefix>/share/portal-credits/
-    path.join(here, '..', '..', 'share', 'portal-credits'),
+    // where a Homebrew install puts it: <cellar>/<version>/share/portal-credits
+    // (also visible as <prefix>/share/portal-credits through the symlink)
+    path.join(here, '..', 'share', 'portal-credits'),
     ...(process.env.HOMEBREW_PREFIX ? [path.join(process.env.HOMEBREW_PREFIX, 'share', 'portal-credits')] : []),
   ];
   for (const dir of dirs) {
