@@ -1,0 +1,16 @@
+node_modules/
+.DS_Store
+
+# The song is NOT part of this project, and must not be committed:
+# "Still Alive" is Valve's and Jonathan Coulton's recording. Drop your own
+# copy in one of these spots and the tool finds it automatically.
+*.mp3
+*.m4a
+*.flac
+*.ogg
+*.oga
+*.opus
+*.wav
+*.aac
+music/
+audio/

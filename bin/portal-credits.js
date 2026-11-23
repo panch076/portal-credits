@@ -11,9 +11,11 @@
 // --audio at your own copy.
 
 import { spawn, execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
 import readline from 'node:readline';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 import { ARTS, EVENTS, CREDITS } from './portal-data.js';
 
 const HELP = `portal-credits — the Portal end credits, recreated in your terminal.
@@ -26,7 +28,9 @@ Usage
   portal-credits [options]
 
 Options
-  --audio <file>    play and sync to your own copy of "Still Alive" (.mp3, ...)
+  --audio <file>    play and sync to your own copy of "Still Alive"
+                    (by default it looks for still-alive.mp3 etc. in the
+                    repo folder, ./music, ./audio, or $PORTAL_CREDITS_AUDIO)
   --offset <sec>    delay the song's start, in seconds            (default 0)
   --speed <x>       run everything faster or slower, e.g. 2 or 0.5
   --frame <sec>     print one frame at <sec> and exit (no TTY needed)
@@ -110,6 +114,39 @@ function parseArgs(argv) {
   if (!Number.isFinite(o.offset) || o.offset < 0) die('--offset must be a positive number');
   if (o.frame !== null && !Number.isFinite(o.frame)) die('--frame must be a number');
   return o;
+}
+
+// ---------------------------------------------------------------------------
+// finding the song
+// ---------------------------------------------------------------------------
+
+// No audio ships with this project — "Still Alive" is Valve's and Jonathan
+// Coulton's. Drop your own copy in and it will be picked up.
+const AUDIO_RE = /^(portal[-_ ]?)?still[-_ ]?alive[^/\\]*\.(mp3|m4a|flac|ogg|oga|opus|wav|aac)$/i;
+
+function discoverAudio() {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const dirs = [
+    process.cwd(),
+    path.join(here, '..'),
+    path.join(process.cwd(), 'music'),
+    path.join(process.cwd(), 'audio'),
+    path.join(here, '..', 'music'),
+    path.join(here, '..', 'audio'),
+  ];
+  for (const dir of dirs) {
+    let entries;
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      continue;
+    }
+    const hit = entries
+      .filter((f) => AUDIO_RE.test(f))
+      .sort((a, b) => a.length - b.length)[0];
+    if (hit) return path.join(dir, hit);
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -407,6 +444,7 @@ function frameAt(W, H, t, palette) {
 // ---------------------------------------------------------------------------
 
 let AUDIO_WARNING = null;
+let AUDIO_FOUND = null;
 
 function windowsPlayer(file) {
   let winPath = file;
@@ -488,10 +526,16 @@ function play(o) {
     }
     out.write('\x1b[?7h\x1b[?25h\x1b[?1049l');
     if (AUDIO_WARNING) process.stderr.write(AUDIO_WARNING + '\n');
+    else if (!AUDIO_FOUND) {
+      process.stderr.write(
+        'portal-credits: no track found — add still-alive.mp3 (or use --audio); credits play silently.\n',
+      );
+    }
   };
   process.on('exit', cleanup);
 
   if (o.audio) {
+    AUDIO_FOUND = o.audio;
     if (o.offset > 0) {
       setTimeout(() => {
         if (!finished) audio = startAudio(o.audio);
@@ -559,6 +603,13 @@ function dumpFrame(o) {
 
 const opts = parseArgs(process.argv.slice(2));
 if (opts.audio && !existsSync(opts.audio)) die(`audio file not found: ${opts.audio}`);
+if (!opts.audio) {
+  const found = process.env.PORTAL_CREDITS_AUDIO || discoverAudio();
+  if (found && existsSync(found)) {
+    opts.audio = found;
+    AUDIO_FOUND = found;
+  }
+}
 if (opts.help) {
   process.stdout.write(HELP);
   process.exit(0);
